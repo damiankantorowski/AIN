@@ -28,9 +28,10 @@ def main():
             for j in range(BITS):
                 if np.random.uniform() < args.m / BITS:
                     x_new[i][j] = int(not x_new[i][j])
-        if evaluate(x_new) < evaluate(x):
+        if (e := evaluate(x_new)) < evaluate(x):
             x = x_new
-            print(tuple(map(float, map(bin2real, x))))
+            print(tuple(map(float, map(bin2real, x))), end=" ")
+            print(float(e))
 
 if __name__ == "__main__":
     main()
