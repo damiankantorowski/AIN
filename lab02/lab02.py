@@ -6,7 +6,7 @@ MAX_COST = 10000
 NUM_RANGE = 10
 
 def bin2int(x):
-    return sum([2 ** i * x[BITS - i - 1] for i in range(BITS)])
+    return sum(2 ** i * x[BITS - i - 1] for i in range(BITS))
 
 def bin2real(x):
     return 2 * NUM_RANGE / 2 ** BITS * bin2int(x) - NUM_RANGE
