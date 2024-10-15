@@ -18,7 +18,7 @@ def evaluate(x):
 def main():
     parser = ArgumentParser()
     parser.add_argument("--n", type=int, default=2)
-    parser.add_argument("--m", type=int, choices=[1, 4], default=1)
+    parser.add_argument("--m", type=int, default=1)
     args = parser.parse_args()
     x = np.array([np.ones(BITS, dtype=int)] * args.n) #x0 = [10, ..., 10]
     evaluate.cost = 0
