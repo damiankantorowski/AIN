@@ -7,8 +7,7 @@ NUM_RANGE_T1 = 3
 NUM_RANGE_T2 = 32.768
 
 def bin2int(x):
-    return int("".join([x[i] for i in x ]), 2)
-    #return sum(2 ** i * x[BITS - i - 1] for i in range(BITS))
+    return sum(2 ** i * x[BITS - i - 1] for i in range(BITS))
 
 def bin2real(x, num_range):
     return 2 * num_range / 2 ** BITS * bin2int(x) - num_range
