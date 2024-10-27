@@ -86,17 +86,16 @@ def main():
             for _ in range(100):
                 if args.repr == "real":
                     x_new = generate_neighbour_real(x, num_range)
-                    new_eval = evaluate(x)
+                    new_eval = evaluate(x_new)
                 else:
                     x_new = generate_neighbour_binary(x, args.m)
-                    new_eval = evaluate([bin2real(xi, num_range) for xi in x])
+                    new_eval = evaluate([bin2real(xi, num_range) for xi in x_new])
                 if new_eval < cur_eval:
                     x = x_new
                     cur_eval = new_eval
-                else:
-                    if np.random.uniform(0, 1) < np.exp((cur_eval - new_eval) / T):
-                        x = x_new
-                        cur_eval = new_eval
+                elif np.random.uniform() < np.exp((cur_eval - new_eval) / T):
+                    x = x_new
+                    cur_eval = new_eval
                 file.write(f"{get_result(x, args.repr, num_range)} {cur_eval}\n")
             k += 1
             T = T_schedule(1, Tn, 99, k)
