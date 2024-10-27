@@ -1,6 +1,5 @@
-﻿import numpy as np
+import numpy as np
 from argparse import ArgumentParser
-import random
 
 BITS = 16
 MAX_COST = 10000
@@ -8,7 +7,8 @@ NUM_RANGE_T1 = 3
 NUM_RANGE_T2 = 32.768
 
 def bin2int(x):
-    return sum(2 ** i * x[BITS - i - 1] for i in range(BITS))
+    return int("".join([x[i] for i in x ]), 2)
+    #return sum(2 ** i * x[BITS - i - 1] for i in range(BITS))
 
 def bin2real(x, num_range):
     return 2 * num_range / 2 ** BITS * bin2int(x) - num_range
@@ -41,7 +41,7 @@ def generate_neighbour_real(x, num_range):
     x_new = x.copy()
     for i in range(len(x)):
         while True:
-            x_candidate = x[i] + random.gauss(0, 1)
+            x_candidate = x[i] + np.random.normal()
             if -num_range <= x_candidate <= num_range:
                 x_new[i] = x_candidate
                 break
