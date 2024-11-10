@@ -2,7 +2,7 @@ import numpy as np
 from argparse import ArgumentParser
 
 BITS = 16
-POP_SIZE = 5
+POP_SIZE = 20
 MAX_COST = 10000
 
 def bin2real(x, num_range):
