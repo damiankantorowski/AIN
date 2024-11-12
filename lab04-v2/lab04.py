@@ -17,7 +17,7 @@ def bin2real(x, num_range):
         return binary
     
     # Decode Gray code to binary
-    if(GRAY == True):
+    if(GRAY):
         x = gray_to_binary(x)  
 
     return 2 * num_range / 2 ** BITS * int("".join(x.astype(str)), 2) - num_range
