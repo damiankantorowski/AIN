@@ -194,7 +194,7 @@ def get_result(x, num_range):
 def save_ecdf(data, n, evaluate, fout):
     optimum = evaluate(np.zeros((n, 1)))
     cost_thresholds = np.array([round(n * 10 ** (i * 0.1)) for i in range(41)])
-    score_thresholds = np.array([10 ** (i * 0.2) for i in range(-40, 11)])
+    score_thresholds = np.array([10 ** (i * 0.2) for i in range(10, -41, -1)])
     ecdf = [[(data[cost_threshold - 1, :] < optimum + score_threshold).sum()
             for cost_threshold in cost_thresholds]
             for score_threshold in score_thresholds]
