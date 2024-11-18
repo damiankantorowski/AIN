@@ -61,7 +61,7 @@ def select(population, scores, k=2):
     return selected, selected_scores
 
 @njit
-def crossover(parents, scores):
+def crossover(parents):
     offspring = parents.copy()
     for i in range(0, len(offspring), 2):
         for j in range(len(offspring[i])):
@@ -122,7 +122,7 @@ def main():
     best_x, best_score = population[i := np.argmin(scores)], scores[i]
     while cost < max_cost:
         selected, selected_scores = select(population, scores)
-        offspring = crossover(selected, selected_scores)
+        offspring = crossover(selected)
         offspring = mutate(offspring)
         population = add_elites(population, offspring, scores)
         scores, cost = evaluate(args.f, population, cost)
