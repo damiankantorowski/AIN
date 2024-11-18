@@ -64,7 +64,7 @@ def crossover(parents):
             offspring[i][j][:point1] = parents[i][j][:point1]
             offspring[i][j][point1:point2] = parents[i + 1][j][point1:point2]
             offspring[i][j][point2:] = parents[i][j][point2:]
-            
+
             offspring[i + 1][j][:point1] = parents[i + 1][j][:point1]
             offspring[i + 1][j][point1:point2] = parents[i][j][point1:point2]
             offspring[i + 1][j][point2:] = parents[i + 1][j][point2:]
@@ -107,6 +107,7 @@ def main():
     parser.add_argument("--n", type=int, default=5)
     parser.add_argument("--f", type=int, choices=[1, 2, 3], default=1)
     args = parser.parse_args()
+    
     max_cost = 10000 * args.n
     cost = 0
     population = np.random.randint(0, 2, (POP_SIZE, args.n, BITS))
