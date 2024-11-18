@@ -47,15 +47,10 @@ def select(population, scores, k=2):
     n_selected = POP_SIZE-ELITE_SIZE
     selected = np.zeros((n_selected,) + population[0].shape, dtype=population.dtype)
     selected_scores = np.zeros(n_selected, dtype=scores.dtype)
-    # Wypełnij tablice wynikowe
     for i in range(n_selected):
-        # Wybierz k losowych osobników
         indices = np.random.choice(len(population), k, replace=False)
-        # Znajdź najlepszy wynik
         best = np.min(scores[indices])
-        # Znajdź indeks najlepszego
         best_index = np.where(scores == best)[0][0]
-        # Zapisz najlepszego osobnika i jego wynik
         selected[i] = population[best_index]
         selected_scores[i] = best
     return selected, selected_scores
@@ -65,10 +60,7 @@ def crossover(parents):
     offspring = parents.copy()
     for i in range(0, len(offspring), 2):
         for j in range(len(offspring[i])):
-            # Choose two random crossover points
             point1, point2 = sorted(np.random.choice(BITS, 2, replace=False))
-            
-            # Create children by swapping bits between the two points
             offspring[i][j][:point1] = parents[i][j][:point1]
             offspring[i][j][point1:point2] = parents[i + 1][j][point1:point2]
             offspring[i][j][point2:] = parents[i][j][point2:]
