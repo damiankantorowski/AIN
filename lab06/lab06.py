@@ -92,18 +92,19 @@ def add_elites(population, offspring, scores):
     elites = population[np.argsort(scores)[:ELITE_SIZE]]
     return np.concatenate((elites, offspring))
 
+@njit
 def evaluate(f, population, cost):
     scores = np.zeros(len(population))
-    if f == 1:
-        evaluate_func = rosenbrock
-    elif f == 2:
-        evaluate_func = salomon
-    else:
-        evaluate_func = whitley
     for i in range(len(population)):
-        x_real = np.array([bin2real(population[i][j], DOMAINS[f-1][1]) 
-                          for j in range(len(population[i]))])
-        scores[i], cost = evaluate_func(x_real, cost)
+        x_real = np.zeros(len(population[i]))
+        for j in range(len(population[i])):
+            x_real[j] = bin2real(population[i][j], DOMAINS[f-1][1])
+        if f == 1:
+            scores[i], cost = rosenbrock(x_real, cost)
+        elif f == 2:
+            scores[i], cost = salomon(x_real, cost)
+        else:
+            scores[i], cost = whitley(x_real, cost)
     return scores, cost
 
 def get_result(x, num_range):
@@ -114,7 +115,6 @@ def main():
     parser.add_argument("--n", type=int, default=5)
     parser.add_argument("--f", type=int, choices=[1, 2, 3], default=1)
     args = parser.parse_args()
-    
     max_cost = 10000 * args.n
     cost = 0
     population = np.random.randint(0, 2, (POP_SIZE, args.n, BITS))
