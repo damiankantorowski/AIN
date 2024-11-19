@@ -39,7 +39,7 @@ def whitley(x, cost=0):
     for i in range(n):
         for j in range(n):
             y = 100 * (x[i] - x[j]**2)**2 + (1 - x[j])**2
-            result += y ** 2 - np.cos(y) + 1
+            result += (y ** 2)/4000 - np.cos(y) + 1
     return result, cost + 1
 
 @njit
