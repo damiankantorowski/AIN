@@ -2,15 +2,15 @@ import optuna
 import numpy as np
 from numba import njit
 
-POP_SIZE = 20 # Has to be even
-ELITE_SIZE = 2 # Has to be even
+#POP_SIZE = 20 # Has to be even
+#ELITE_SIZE = 2 # Has to be even
 BITS = 16
 GRAY = True
-MUTATION_RATE = 1 / BITS
-P_CROSSOVER_MAX = 0.9
-P_CROSSOVER_MIN = 0.3
-MAX_EVALUATIONS = 10000
-CUR_EVALUATIONS = 0
+#MUTATION_RATE = 1 / BITS
+#P_CROSSOVER_MAX = 0.9
+#P_CROSSOVER_MIN = 0.3
+#MAX_EVALUATIONS = 10000
+#CUR_EVALUATIONS = 0
 DOMAINS = np.array([[-30, 30], [-100, 100], [-10.24, 10.24]])
 
 
@@ -51,9 +51,9 @@ def whitley(x, cost=0):
 # WE HAVE PERMISSION ONLY FROM: lectures.
 # TODO rank selection
 @njit
-def select(population, scores, selection_type="tournament", k=2):
+def select(population, scores, selection_type="tournament", k=2, n_elites=2):
     if selection_type == "tournament":
-        n_selected = POP_SIZE-ELITE_SIZE
+        n_selected = len(population)-n_elites
         selected = np.zeros((n_selected,) + population[0].shape, dtype=population.dtype)
         selected_scores = np.zeros(n_selected, dtype=scores.dtype)
         for i in range(n_selected):
@@ -67,16 +67,16 @@ def select(population, scores, selection_type="tournament", k=2):
 
 # Function to decrease the crossover probability based on evaluations
 @njit
-def get_crossover_probability():
+def get_crossover_probability(p_crossover_max, p_crossover_min, cur_evaluations, max_evaluations):
     # Linearly decrease crossover probability based on the number of evaluations
-    return P_CROSSOVER_MAX - (P_CROSSOVER_MAX - P_CROSSOVER_MIN) * (CUR_EVALUATIONS / MAX_EVALUATIONS)
+    return p_crossover_max - (p_crossover_max - p_crossover_min) * (cur_evaluations / max_evaluations)
 
 # It only works when parents are even.
 # WE HAVE PERMISSION ONLY FROM: lectures + literature
 @njit
-def crossover(parents, crossover_type="one_point"):
+def crossover(parents, crossover_type, p_crossover_max, p_crossover_min, cur_evaluations, max_evaluations):
 
-    crossover_prob = get_crossover_probability()
+    crossover_prob = get_crossover_probability(p_crossover_max, p_crossover_min, cur_evaluations, max_evaluations)
 
     offspring = parents.copy()
     for i in range(0, len(offspring), 2):
@@ -100,7 +100,7 @@ def crossover(parents, crossover_type="one_point"):
                     offspring[i + 1][j][point2:] = parents[i + 1][j][point2:]                    
                 elif crossover_type == "uniform":
                     for k in range(BITS):
-                        if np.random.uniform() < 0.5: #TODO possibility to be parameter
+                        if np.random.uniform() < 0.5:
                             offspring[i][j][k], offspring[i + 1][j][k] = (
                                 offspring[i + 1][j][k],
                                 offspring[i][j][k],
@@ -119,8 +119,8 @@ def mutate(population, mutation_rate):
     return mutated
 
 @njit
-def add_elites(population, offspring, scores):
-    elites = population[np.argsort(scores)[:ELITE_SIZE]]
+def add_elites(population, offspring, scores, n_elites=2):
+    elites = population[np.argsort(scores)[:n_elites]]
     return np.concatenate((elites, offspring))
 
 @njit
@@ -144,17 +144,17 @@ def get_result(x, num_range):
 def objective(trial):
     # Define the search space for selection, crossover, mutation types and rates
     #global GRAY
-    global ELITE_SIZE
-    global POP_SIZE
-    global P_CROSSOVER_MAX
-    global P_CROSSOVER_MIN
-    global CUR_EVALUATIONS
-    global MAX_EVALUATIONS
+    #global ELITE_SIZE
+    #global POP_SIZE
+    #global P_CROSSOVER_MAX
+    #global P_CROSSOVER_MIN
+    #global CUR_EVALUATIONS
+    #global MAX_EVALUATIONS
 
-    P_CROSSOVER_MAX = trial.suggest_float("P_CROSSOVER_MAX", 0.7, 0.95)
-    P_CROSSOVER_MIN = trial.suggest_float("P_CROSSOVER_MIN", 0.1, 0.3)
-    POP_SIZE = trial.suggest_categorical("POP_SIZE", [20, 22, 24, 26, 28, 30]) # Has to be even
-    ELITE_SIZE = trial.suggest_categorical("ELITE_SIZE", [0, 2, 4, 6]) # Has to be even
+    p_crossover_max = trial.suggest_float("p_crossover_max", 0.8, 0.95)
+    p_crossover_min = trial.suggest_float("p_crossover_min", 0.1, 0.3)
+    pop_size = trial.suggest_categorical("pop_size", [20, 22, 24, 26, 28, 30]) # Has to be even
+    n_elites = trial.suggest_categorical("n_elites", [0, 2, 4, 6]) # Has to be even
     #GRAY = trial.suggest_categorical("GRAY", [True, False])
     #selection_type = trial.suggest_categorical("selection_type", ["rank", "tournament"])
     selection_type = "tournament"
@@ -169,28 +169,25 @@ def objective(trial):
 
     n=15
     max_cost = 10000*n  # Max evaluations
-    MAX_EVALUATIONS = max_cost
     num_runs = 5  # Number of runs per parameter configuration per function
     results = {1: [], 2: [], 3: []}  # Store results for each function
 
     for f in [1, 2, 3]:  # Loop through all functions (Rosenbrock, Salomon, Whitley)
         for _ in range(num_runs):
-            population = np.random.randint(0, 2, (POP_SIZE, n, BITS))
+            population = np.random.randint(0, 2, (pop_size, n, BITS))
             cost = 0
-            CUR_EVALUATIONS = cost
             scores, cost = evaluate(f=f, population=population, cost=cost)
             best_x, best_score = population[i := np.argmin(scores)], scores[i]
 
             while cost < max_cost:
                 if selection_type == "tournament":
-                    selected, selected_scores = select(population, scores, selection_type, k)
+                    selected, selected_scores = select(population, scores, selection_type, k, n_elites)
                 elif selection_type == "rank":
                     selected, selected_scores = select(population, scores, selection_type)
-                offspring = crossover(selected, crossover_type)
+                offspring = crossover(selected, crossover_type, p_crossover_max, p_crossover_min, cost, max_cost)
                 offspring = mutate(offspring, mutation_rate)
-                population = add_elites(population, offspring, scores)
+                population = add_elites(population, offspring, scores, n_elites)
                 scores, cost = evaluate(f=f, population=population, cost=cost)
-                CUR_EVALUATIONS = cost
                 if scores[new_i := np.argmin(scores)] < best_score:
                     best_x, best_score = population[new_i], scores[new_i]
 
