@@ -3,7 +3,7 @@ import numpy as np
 from numba import njit
 
 POP_SIZE = 20 # Has to be even
-ELITE_SIZE = 2
+ELITE_SIZE = 2 # Has to be even
 BITS = 16
 GRAY = True
 MUTATION_RATE = 1 / BITS
@@ -143,7 +143,7 @@ def get_result(x, num_range):
 
 def objective(trial):
     # Define the search space for selection, crossover, mutation types and rates
-    global GRAY
+    #global GRAY
     global ELITE_SIZE
     global POP_SIZE
     global P_CROSSOVER_MAX
@@ -155,7 +155,7 @@ def objective(trial):
     P_CROSSOVER_MIN = trial.suggest_float("P_CROSSOVER_MIN", 0.1, 0.3)
     POP_SIZE = trial.suggest_categorical("POP_SIZE", [20, 22, 24, 26, 28, 30]) # Has to be even
     ELITE_SIZE = trial.suggest_categorical("ELITE_SIZE", [0, 2, 4, 6]) # Has to be even
-    GRAY = trial.suggest_categorical("GRAY", [True, False])
+    #GRAY = trial.suggest_categorical("GRAY", [True, False])
     #selection_type = trial.suggest_categorical("selection_type", ["rank", "tournament"])
     selection_type = "tournament"
     crossover_type = trial.suggest_categorical("crossover_type", ["one_point", "two_point", "uniform"])
@@ -211,7 +211,7 @@ def objective(trial):
 
 def main():
     study = optuna.create_study(direction="minimize")  # Minimize the cost or maximize the fitness
-    study.optimize(objective, n_trials=6, n_jobs=-1) # 2 used cores
+    study.optimize(objective, n_trials=1400, n_jobs=7) # 2 used cores
 
 # Retrieve and display trial results
     print("Best trial:")
@@ -246,7 +246,7 @@ def main():
     # Save to CSV file
     trials_df_sorted.to_csv('optuna.csv', index=False)
     
-    print(trials_df_sorted)   
+    #print(trials_df_sorted)   
 
 if __name__ == "__main__":
     main()
