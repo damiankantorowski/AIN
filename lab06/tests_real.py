@@ -215,7 +215,9 @@ def objective(trial):
 
 
 def main():
-    study = optuna.create_study(direction="minimize")  # Minimize the cost or maximize the fitness
+    database_url = "sqlite:///study.db?timeout=60"
+    study = optuna.create_study(direction="minimize", storage=database_url, study_name="real_test_1", load_if_exists=True)
+    #study = optuna.create_study(direction="minimize")  # Minimize the cost or maximize the fitness
     study.optimize(objective, n_trials=10, n_jobs=5) # 2 used cores
 
 # Retrieve and display trial results
