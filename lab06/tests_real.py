@@ -192,10 +192,17 @@ def mutate(population, f=1):
                 mutated[i][0][j] = reflective_clipping(xi, DOMAINS[f][0], DOMAINS[f][1])
     return mutated
 
+# @njit
+# def add_elites(population, offspring, scores, n_elites):
+#     elites = population[np.argsort(scores)[:n_elites]]
+#     return np.concatenate((elites, offspring))
+
 @njit
-def add_elites(population, offspring, scores, n_elites):
-    elites = population[np.argsort(scores)[:n_elites]]
-    return np.concatenate((elites, offspring))
+def add_elites(prev_gen, offspring, prev_gen_scores, offspring_scores, n_elites):
+    elite_indices = np.argsort(prev_gen_scores)[:n_elites]
+    elites = prev_gen[elite_indices]
+    elite_scores = prev_gen_scores[elite_indices]
+    return np.concatenate((elites, offspring)), np.concatenate((elite_scores, offspring_scores))
 
 @njit
 def evaluate(f, population, cost):
@@ -273,8 +280,15 @@ def objective(trial):
                 selected, selected_scores = select(population, scores, selection_type, k, a, epsilon, n_elites)
                 offspring = crossover(selected, selected_scores, crossover_type, eta, f)
                 offspring = mutate(offspring, f)
-                population = add_elites(population, offspring, scores, n_elites)
-                scores, cost = evaluate(f=f, population=population, cost=cost)
+                # only for clarity               
+                prev_gen_scores = scores
+                # Evaluate the offspring without including elites
+                offspring_scores, cost = evaluate(f, offspring, cost) # TODO prevent exceeding max_cost. Right now it exceeds by a little.
+                # Concatenate the offspring with the elites from the previous generation 
+                population, scores = add_elites(population, offspring, prev_gen_scores, offspring_scores, n_elites) # old_scores - scores of previous generation.
+
+                # population = add_elites(population, offspring, scores, n_elites)
+                # scores, cost = evaluate(f=f, population=population, cost=cost)
                 #CUR_EVALUATIONS = cost
                 if scores[new_i := np.argmin(scores)] < best_score:
                     best_x, best_score = population[new_i], scores[new_i]
