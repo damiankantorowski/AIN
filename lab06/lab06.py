@@ -3,16 +3,16 @@ from numba import njit # for faster execution
 
 DOMAINS = np.array([[-30, 30], [-100, 100], [-10.24, 10.24]])
 
-#@njit
+@njit
 def rosenbrock(x, cost):
     return np.sum(100 * (x[1:] - x[:-1]**2)**2 + (x[:-1] - 1)**2), cost + 1
 
-#@njit
+@njit
 def salomon(x, cost):
     root = np.sqrt(np.sum(x**2))
     return 1 - np.cos(2 * np.pi * root) + 0.1 * root, cost + 1
 
-#@njit
+@njit
 def whitley(x, cost):
     n = len(x)
     result = 0
@@ -22,7 +22,7 @@ def whitley(x, cost):
             result += (y ** 2)/4000 - np.cos(y) + 1
     return result, cost + 1
 
-#@njit
+@njit
 def select(population, scores, k, n_elites):
     """
     Basic tournament selection. Number of selected individuals is equal to the population size minus the number of elites.
@@ -46,7 +46,7 @@ def select(population, scores, k, n_elites):
 
     return selected, selected_scores
 
-#@njit
+@njit
 def reflective_clipping(value, lower, upper):
     """
     Simple reflective clipping.
@@ -58,7 +58,7 @@ def reflective_clipping(value, lower, upper):
             value = upper - (value - upper)
     return value
 
-#@njit
+@njit
 def crossover(parents, scores, f):
     """
     Weighted recombination from Lecture #5, first and second slide in page 5th.
@@ -95,7 +95,7 @@ def crossover(parents, scores, f):
             offspring[i][0][j] = reflective_clipping(xi, DOMAINS[f][0], DOMAINS[f][1])
     return offspring
 
-#@njit
+@njit
 def mutate(offspring, f):
     """
     Implementation of mutation from lecture where individual consists of two vectors: x and sigma.
@@ -117,7 +117,7 @@ def mutate(offspring, f):
     return mutated
 
 
-#@njit
+@njit
 def add_elites(prev_gen, offspring, prev_gen_scores, offspring_scores, n_elites):
     """
     Add n_elites best individuals from the previous generation to the offspring.
@@ -134,7 +134,7 @@ def add_elites(prev_gen, offspring, prev_gen_scores, offspring_scores, n_elites)
     # Combine elites with offspring and their scores
     return np.concatenate((elites, offspring)), np.concatenate((elite_scores, offspring_scores))
 
-#@njit
+@njit
 def evaluate(f, population, cost):
     """
     Redirection to the appropriate function for evaluation.
