@@ -67,12 +67,39 @@ with open('MO-D3R.txt', 'r') as f:
 naive_fronts = naive_pareto_front(evaluations.copy())
 kung_fronts = kung_pareto_front(evaluations.copy())
 
+naive_fronts = [sorted(front) for front in naive_fronts] # Sort points in each front according to f1, to make comparison easier in txt files between Kung and naive fronts
+
+# Write Pareto fronts to files
+write_file = open('pareto_fronts_Kung.txt', 'w')
+write_file.write('nr of fronts: ' + str(len(kung_fronts)))
+write_file.write('\n')
+for front in kung_fronts:
+    for point in front:
+        write_file.write(str(point[0]) + '\t' + str(point[1]) + '\n')
+    write_file.write('\n\n')
+
+write_file.close()
+
+write_file = open('pareto_fronts_naive.txt', 'w')
+write_file.write('nr of fronts: ' + str(len(naive_fronts)))
+write_file.write('\n')
+for front in naive_fronts:
+    for point in front:
+        write_file.write(str(point[0]) + '\t' + str(point[1]) + '\n')
+    write_file.write('\n\n')
+
+write_file.close()
+
+print("nr of Kung fronds:", len(kung_fronts), "\n nr of naive fronts:", len(naive_fronts))
+
+# Plot Pareto fronts
 n = 5  # Number of fronts to highlight
 colors = plt.cm.rainbow(np.linspace(0, 1, n))
 
 fig, axs = plt.subplots(1, 2, figsize=(14, 6))
 
 fig.suptitle('Minimize f1, Maximize f2', fontsize=16)
+
 # Plot Naive Pareto fronts
 for i, (pareto_front, color) in enumerate(zip(naive_fronts[:n], colors)):
     pareto_x = [point[0] for point in pareto_front]
