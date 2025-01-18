@@ -2,7 +2,6 @@
 
 import numpy as np
 import random
-import copy
 import matplotlib.pyplot as plt
 
 DOMAIN = [0.0, 1.0]
@@ -26,6 +25,7 @@ def evaluation(P):
     evaluation.ncalls += len(P)
     return P, evaluation.ncalls
 
+# Each instance of the population is a list of 5 elements: [coordinates, sigma, evaluation, fitness, crowding distance].
 def initialize_population():
     population = []
     for _ in range(N):
@@ -41,6 +41,7 @@ def initialize_population():
 
 evaluation.ncalls = 0
 
+# Fitness assignment based on Pareto sets
 # f1-min, f2-min
 def front_fitness_assignment(P):
     
@@ -79,6 +80,8 @@ def front_kung(P):
         return P_new
 
 # Tournament Selection
+# point with better Pareto front is selected,
+# if the fronts are the same, the one with the smaller crowding distance is selected
 def selection(P):
     P_size = len(P)
     P_selected = []
@@ -91,6 +94,7 @@ def selection(P):
             P_selected.append(p2)
     return P_selected
 
+# Calculate crowding distance in every Pareto front
 def crowding_distance_assignment(P):
     i = 0
     k = 1
@@ -106,6 +110,7 @@ def crowding_distance_assignment(P):
                 front = []
     return P
 
+# Calculate crowding distance in specific front
 def crowding_distance(front):
     for point in front:
         point[4] = 0.0
@@ -130,15 +135,14 @@ def recombination(P_selected):
         sigma1 = (p1[1][0] + p2[1][0]) / 2
         sigma2 = (p1[1][1] + p2[1][1]) / 2
         evaluation = [0.0, 0.0]
-        fitness = 0 # is equal to the pareto set it belongs to. 0 is undefined, 1 is the best
+        fitness = 0 # is equal to the pareto set it belongs to. 0 is undefined, 1 is the best, 2 is second best and so on
         crowd_distance = 0.0
         P_new.append([[x1, x2], [sigma1, sigma2], evaluation, fitness, crowd_distance])
     return P_new
 
+# Simple reflective clipping
 def reflective_clipping(value, lower, upper):
-    """
-    Simple reflective clipping.
-    """
+
     while value < lower or value > upper:
         if value < lower:
             value = lower + (lower - value)
@@ -146,7 +150,7 @@ def reflective_clipping(value, lower, upper):
             value = upper - (value - upper)
     return value
 
-
+# Implementation of mutation from lecture where individual consists of two vectors: x and sigma.
 def mutation(P_recombined):
 
     for i in range(len(P_recombined)):
@@ -161,6 +165,8 @@ def mutation(P_recombined):
                 P_recombined[i][0][j] = reflective_clipping(xi, DOMAIN[0], DOMAIN[1])
     return P_recombined
 
+# Next generation consists of the best pareto sets from sum of parents and offspring
+# The last picked pareto set that fits into the next generetion that exceeds the population size is cut off by crowding distance
 def replacement(P, offspring):
     R = P + offspring
     R = front_fitness_assignment(R)
@@ -180,7 +186,6 @@ def replacement(P, offspring):
                 if len(P_new) + len(front) <= N:
                     P_new += front
                 else:
-                    #crowding_distance(front)
                     front = sorted(front, key=lambda x: x[4], reverse=True)
                     P_new += front[:N-len(P_new)]
                     break
@@ -197,8 +202,6 @@ while True:
     offspring = recombination(P_selected)
     offspring = mutation(offspring)
     offspring, cost = evaluation(offspring)
-    # if cost > MAX_COST:
-    #     break
     P = replacement(P, offspring)
     if cost + N > MAX_COST:
         break
@@ -214,4 +217,3 @@ plt.ylabel("f2")
 plt.grid(True)
 plt.legend()
 plt.show()
-print("Done")
