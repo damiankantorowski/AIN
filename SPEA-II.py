@@ -143,10 +143,10 @@ def selection(P):
 
 # ! CHECK IF CORRECT
 # SBX recombination
-def recombination(P_selected, eta_max = 20, eta_min = 10):
+def recombination(P_selected, eta_start=5, eta_end=20):
     #random.shuffle(P_selected)
     P_new = []
-    eta = eta_max - (eta_max - eta_min) * (cur_iteration / MAX_ITERATIONS)
+    eta = eta_start + (eta_end - eta_start) * (cur_iteration / MAX_ITERATIONS)
     u = np.random.uniform(0, 1)
     if u <= 0.5:
         beta = (2*u)**(1/(1+eta))
