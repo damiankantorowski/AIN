@@ -4,13 +4,17 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import copy
-import matplotlib.ticker as ticker
+
 DOMAIN = [0.0, 1.0]
-DOMAIN_ZDT4 = [-5.0, 5.0] # extra domain for ZDT4 x2,x3,x4... x1 is in [0,1]
-ZDT4 = True
-M = 50 # dimensionality of the problem
+DOMAIN_ZDT4 = [-5.0, 5.0] # extra domain for ZDT4 x1 is in [0,1], the rest: x2,x3,x4... in [-5,5]
 MAX_ITERATIONS = 500
-N = 150 # seize of the population
+N = 150 # size of the population
+
+# parameters for algorithm for dimensions 10, 30, 50
+SIGMA_START = [1.0, 1.0, 1.5]
+SIGMA_MIN = [1e-6, 1e-3, 1e-3]
+ETA_START = [10, 2, 1]
+ETA_END = [18, 20, 5]
 
 def ZDT1(x):
     f1 = x[0]
@@ -56,17 +60,20 @@ def evaluation(P, ZDT_function=ZDT1):
 
     return P
 
-ZDT_functions = [ZDT1, ZDT2, ZDT3, ZDT6]
+ZDT_functions = [ZDT1, ZDT2, ZDT3, ZDT4, ZDT6]
 
 # Each instance of the population is a list of 5 elements: [coordinates, sigma, evaluation, fitness, crowding distance].
-def initialize_population():
+def initialize_population(M, ZDT_function, sigma_start):
     population = []
     for _ in range(N):
         coord = []
-        for _ in range(M):
-            x = random.uniform(DOMAIN[0], DOMAIN[1])
+        for j in range(M):
+            if ZDT_function == ZDT4 and j != 0:
+                x = random.uniform(DOMAIN_ZDT4[0], DOMAIN_ZDT4[1])
+            else:
+                x = random.uniform(DOMAIN[0], DOMAIN[1])
             coord.append(x)
-        sigma = [1.5 for _ in range(M)]
+        sigma = [sigma_start for _ in range(M)]
         evaluation = [0.0, 0.0]
         fitness = 0 # is equal to the pareto set it belongs to. 0 is undefined, 1 is the best
         crowd_distance = 0.0
@@ -76,11 +83,10 @@ def initialize_population():
 # Fitness assignment based on Pareto sets
 # f1-min, f2-min
 def front_fitness_assignment(P):
-
     for point in P:
         point[3] = 0
 
-    P = sorted(P, key=lambda p: (p[2][1], p[2][0])) # sort by minimizing f1. If f1 is the same, minimize f2
+    P = sorted(P, key=lambda p: (p[2][1], p[2][0])) # sort by minimizing f2. If f2 is the same, minimize f1
     P_new = []
     i = 1
     while len(P) != 0:
@@ -88,9 +94,7 @@ def front_fitness_assignment(P):
         for point in pareto_front:
             point[3] = i
             P_new.append(point)
-
         P = [point for point in P if point[3] == 0]
-        #P = sorted(P, key=lambda p: (p[2][0], p[2][1])) # TODO Check if this is necessary
         i += 1
     return P_new
 
@@ -105,7 +109,7 @@ def front_kung(P):
         for point_B in B:
             is_dominated = False
             for point_T in T:
-                if point_T[2][0] <= point_B[2][0]:
+                if point_T[2][0] <= point_B[2][0]: # as f2 is already sorted, we only need to check f1
                     is_dominated = True
                     break
             if is_dominated is False:
@@ -138,11 +142,8 @@ def crowding_distance_assignment(P):
             i += 1
         else:
             k += 1
-
             crowding_distance(front)
             front = []
-    if len(front) == 0:
-        pass
     crowding_distance(front)
     return P
 
@@ -162,46 +163,33 @@ def crowding_distance(front):
             front[i][4] += (front[i+1][2][m] - front[i-1][2][m]) / (front[-1][2][m] - front[0][2][m])
     return front
 
-#Intermediate recombination
-# def recombination(P_selected):
-#     P_new = []
-#     P_selected_len = len(P_selected)
-#     while len(P_new) != P_selected_len:
-#         p1 = P_selected[random.randint(0, P_selected_len-1)]
-#         p2 = P_selected[random.randint(0, P_selected_len-1)]
-#         p3 = P_selected[random.randint(0, P_selected_len-1)]
-
-#         x_mean = [(p1[0][i] + p2[0][i] + p3[0][i]) / 3 for i in range(M)]
-#         sigma_mean = [(p1[1][i] + p2[1][i] + p3[1][i]) / 3 for i in range(M)]
-
-#         evaluation = [0.0, 0.0]
-#         fitness = 0
-#         crowd_distance = 0.0
-#         P_new.append([x_mean, sigma_mean, evaluation, fitness, crowd_distance])
-#     return P_new
-
 # SBX recombination
-def recombination(P_selected, eta_start=1, eta_end=5):
+def recombination(P_selected, ZDT_function, cur_iteration, sigma_start, sigma_min, eta_start=1, eta_end=5):
     random.shuffle(P_selected)
     P_new = []
     eta = eta_start + (eta_end - eta_start) * (cur_iteration / MAX_ITERATIONS)
-    u = np.random.uniform(0, 1)
-    if u <= 0.5:
-        beta = (2*u)**(1/(1+eta))
-    else:
-        beta = (1/(2*(1-u)))**(1/(1+eta))
+    
     for i in range(0, len(P_selected), 2):
+        u = np.random.uniform(0, 1)
+        if u <= 0.5:
+            beta = (2*u)**(1/(1+eta))
+        else:
+            beta = (1/(2*(1-u)))**(1/(1+eta))
         n = len(P_selected[i][0])
         offspring1_x = []
         offspring2_x = []
         offspring1_sigma = []
         offspring2_sigma = []
         for j in range(n):
-            offspring1_x.append(reflective_clipping(0.5 * ((1 + beta) * P_selected[i][0][j] + (1 - beta) * P_selected[i + 1][0][j]), DOMAIN[0], DOMAIN[1]))
-            offspring2_x.append(reflective_clipping(0.5 * ((1 - beta) * P_selected[i][0][j] + (1 + beta) * P_selected[i + 1][0][j]), DOMAIN[0], DOMAIN[1]))
+            if ZDT_function == ZDT4 and j != 0:
+                offspring1_x.append(reflective_clipping(0.5 * ((1 + beta) * P_selected[i][0][j] + (1 - beta) * P_selected[i + 1][0][j]), DOMAIN_ZDT4[0], DOMAIN_ZDT4[1]))
+                offspring2_x.append(reflective_clipping(0.5 * ((1 - beta) * P_selected[i][0][j] + (1 + beta) * P_selected[i + 1][0][j]), DOMAIN_ZDT4[0], DOMAIN_ZDT4[1]))
+            else:
+                offspring1_x.append(reflective_clipping(0.5 * ((1 + beta) * P_selected[i][0][j] + (1 - beta) * P_selected[i + 1][0][j]), DOMAIN[0], DOMAIN[1]))
+                offspring2_x.append(reflective_clipping(0.5 * ((1 - beta) * P_selected[i][0][j] + (1 + beta) * P_selected[i + 1][0][j]), DOMAIN[0], DOMAIN[1]))
 
-            offspring1_sigma.append(reflective_clipping(0.5 * ((1 + beta) * P_selected[i][1][j] + (1 - beta) * P_selected[i + 1][1][j]), 1e-3, 1.5))
-            offspring2_sigma.append(reflective_clipping(0.5 * ((1 - beta) * P_selected[i][1][j] + (1 + beta) * P_selected[i + 1][1][j]), 1e-3, 1.5)) 
+            offspring1_sigma.append(reflective_clipping(0.5 * ((1 + beta) * P_selected[i][1][j] + (1 - beta) * P_selected[i + 1][1][j]), sigma_min, sigma_start))
+            offspring2_sigma.append(reflective_clipping(0.5 * ((1 - beta) * P_selected[i][1][j] + (1 + beta) * P_selected[i + 1][1][j]), sigma_min, sigma_start)) 
 
         evaluation = [0.0, 0.0]
         fitness = 0
@@ -223,8 +211,7 @@ def reflective_clipping(value, lower, upper):
     return value
 
 # Implementation of mutation from lecture where individual consists of two vectors: x and sigma.
-def mutation(P_recombined):
-
+def mutation(P_recombined, ZDT_function, sigma_start, sigma_min):
     for i in range(len(P_recombined)):
             n = len(P_recombined[i][0]) # number of dimensions
             random_for_all = np.random.normal(0, 1) # for every dimension of one individual
@@ -232,22 +219,19 @@ def mutation(P_recombined):
                 sigma = P_recombined[i][1][j] * np.exp(
                     random_for_all / np.sqrt(2*n)
                     + np.random.normal(0, 1) / np.sqrt(2*np.sqrt(n)))
-                P_recombined[i][1][j] = reflective_clipping(sigma, 1e-3, 1.5)
+                P_recombined[i][1][j] = reflective_clipping(sigma, sigma_min, sigma_start)
                 xi = P_recombined[i][0][j] + np.random.normal(0, P_recombined[i][1][j])
-                P_recombined[i][0][j] = reflective_clipping(xi, DOMAIN[0], DOMAIN[1])
+                if ZDT_function == ZDT4 and j != 0:
+                    P_recombined[i][0][j] = reflective_clipping(xi, DOMAIN_ZDT4[0], DOMAIN_ZDT4[1])
+                else:
+                    P_recombined[i][0][j] = reflective_clipping(xi, DOMAIN[0], DOMAIN[1])
     return P_recombined
 
 # Next generation consists of the best pareto sets from sum of parents and offspring
 # The last picked pareto set that fits into the next generetion that exceeds the population size is cut off by crowding distance
 def replacement(P, offspring):
-    if len(P) == 0 or len(offspring) == 0:
-        pass
     R = copy.deepcopy(P) + copy.deepcopy(offspring)
-    if len(R) == 0:
-        pass
     R = front_fitness_assignment(R)
-    if len(R) == 0:
-        pass
     R = crowding_distance_assignment(R)
     P_new = []
 
@@ -287,16 +271,9 @@ def draw_pareto_fronts(pareto_fronts, objective_func_name, num_dimensions):
 
     plt.figure(figsize=(10, 8))
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, zorder=1)
-    plt.minorticks_on()  # Enable minor ticks
+    plt.minorticks_on()  
     plt.grid(True, which='major', linestyle='-', linewidth=0.75, color='gray', zorder=1)
     plt.grid(True, which='minor', linestyle=':', linewidth=0.5, color='darkgray', zorder=1)
-
-    # Set the number of minor ticks between major ticks
-    plt.gca().xaxis.set_minor_locator(plt.MultipleLocator(0.1))
-    plt.gca().yaxis.set_minor_locator(plt.MultipleLocator(0.25))
-
-    plt.gca().xaxis.set_minor_formatter(ticker.FuncFormatter(lambda x, _: f'{x:.2f}'))
-    plt.gca().yaxis.set_minor_formatter(ticker.FuncFormatter(lambda y, _: f'{y:.2f}'))
     
     for pareto_front in pareto_fronts:
         x_coords = [point[2][0] for point in pareto_front]
@@ -319,40 +296,37 @@ def draw_pareto_fronts(pareto_fronts, objective_func_name, num_dimensions):
     plt.title(f"Population size: {N}", fontsize=10)
     plt.xlabel("f1")
     plt.ylabel("f2")
-    # Make the grid denser with more minor and major gridlines
-
-    #plt.grid(True)
     plt.legend()  
     plt.tight_layout()
-    plt.savefig(f"pareto_fronts_{objective_func_name}_{num_dimensions}.png")
-    #plt.show()
+    plt.savefig(f"{objective_func_name}_{num_dimensions}.png")
 
 def main():
-    for i, ZDT_function in enumerate(ZDT_functions):
-        P = initialize_population()
-        P = evaluation(P, ZDT_function)
-        P = front_fitness_assignment(P)
+    dimensions = [10, 30, 50]
+    for i, M in enumerate(dimensions):
+        for j, ZDT_function in enumerate(ZDT_functions):
+            P = initialize_population(M, ZDT_function, SIGMA_START[i])
+            P = evaluation(P, ZDT_function)
+            P = front_fitness_assignment(P)
 
-        P = crowding_distance_assignment(P)
-        global cur_iteration
-        cur_iteration = 1
-        checkpoints = [20, 50, 100, 500]
-        pareto_evolution = []
-        while True:
-            if(cur_iteration in checkpoints):
-                pareto_evolution.append([[point[0], point[1], point[2], point[3], point[4]] for point in P])
-                print("checkpoint: ", cur_iteration)
-                if(cur_iteration == MAX_ITERATIONS):
-                    break
-            P_selected = selection(P)
-            offspring = recombination(P_selected)
-            offspring = mutation(offspring)
-            offspring = evaluation(offspring, ZDT_function)
-            P = replacement(P, offspring)
-            cur_iteration += 1
-        if i == 3:
-            i = 5
-        draw_pareto_fronts(pareto_evolution, f"ZDT{i + 1}", M)
+            P = crowding_distance_assignment(P)
+            cur_iteration = 1
+            checkpoints = [20, 50, 100, 500]
+            pareto_evolution = []
+            while True:
+                if(cur_iteration in checkpoints):
+                    pareto_evolution.append([[point[0], point[1], point[2], point[3], point[4]] for point in P])
+                    print("checkpoint: ", cur_iteration)
+                    if(cur_iteration == MAX_ITERATIONS):
+                        break
+                P_selected = selection(P)
+                offspring = recombination(P_selected, ZDT_function, cur_iteration, SIGMA_START[i], SIGMA_MIN[i], ETA_START[i], ETA_END[i])
+                offspring = mutation(offspring, ZDT_function, SIGMA_START[i], SIGMA_MIN[i])
+                offspring = evaluation(offspring, ZDT_function)
+                P = replacement(P, offspring)
+                cur_iteration += 1
+            if j == 4:
+                j = 5
+            draw_pareto_fronts(pareto_evolution, f"ZDT{j + 1}", M)
 
 if __name__ == "__main__":
     main()
